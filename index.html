@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GKS Campus Bridge - Student Portal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Leaflet CSS & JS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0B0F19;
+            color: #F1F5F9;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1E293B;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        .leaflet-tile-pane {
+            filter: brightness(0.85) contrast(1.2) invert(0.9) hue-rotate(200deg);
+        }
+        .leaflet-container {
+            background: #0f172a !important;
+            border-radius: 0.75rem;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100 antialiased">
+
+    <!-- Modal Registration / Edit Profile -->
+    <div id="registerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5">
+            <div class="text-center space-y-1">
+                <div class="w-12 h-12 rounded-2xl bg-blue-600/20 text-blue-400 flex items-center justify-center mx-auto border border-blue-500/30">
+                    <i data-lucide="user-plus" class="w-6 h-6"></i>
+                </div>
+                <h2 class="text-xl font-bold text-white" data-i18n="regTitle">Профиль студента</h2>
+                <p class="text-xs text-slate-400" data-i18n="regSubtitle">Заполните данные для доступа к сервисам</p>
+            </div>
+
+            <form onsubmit="handleRegistration(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1" data-i18n="labelName">Ваше имя</label>
+                    <input type="text" id="regName" required placeholder="Александр" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:border-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1" data-i18n="labelUni">Ваш Университет</label>
+                    <select id="regUniversity" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:border-blue-500 focus:outline-none">
+                        <option value="SNU">Seoul National University (SNU)</option>
+                        <option value="KU">Korea University (Anam)</option>
+                        <option value="YU">Yonsei University (Sinchon)</option>
+                        <option value="SKKU">Sungkyunkwan University (SKKU)</option>
+                        <option value="KAIST">KAIST (Daejeon Campus)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2" data-i18n="labelAvatar">Аватар</label>
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="avatar" value="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" checked class="peer hidden">
+                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" class="w-10 h-10 rounded-full border-2 border-transparent peer-checked:border-blue-500 object-cover">
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="avatar" value="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" class="peer hidden">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" class="w-10 h-10 rounded-full border-2 border-transparent peer-checked:border-blue-500 object-cover">
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="avatar" value="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" class="peer hidden">
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" class="w-10 h-10 rounded-full border-2 border-transparent peer-checked:border-blue-500 object-cover">
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="avatar" value="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" class="peer hidden">
+                            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" class="w-10 h-10 rounded-full border-2 border-transparent peer-checked:border-blue-500 object-cover">
+                        </label>
+                    </div>
+
+                    <!-- Gallery Upload Button -->
+                    <div class="relative">
+                        <input type="file" id="avatarFileInput" accept="image/*" onchange="handleCustomAvatar(event)" class="hidden">
+                        <button type="button" onclick="document.getElementById('avatarFileInput').click()" class="w-full py-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-300 rounded-xl flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="image" class="w-4 h-4 text-blue-400"></i>
+                            <span data-i18n="uploadGallery">Загрузить из галереи</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm transition-all shadow-lg shadow-blue-600/30" data-i18n="btnSaveProfile">
+                    Сохранить профиль
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-red-500 p-0.5 shadow-lg shadow-blue-500/20">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                        <i data-lucide="graduation-cap" class="w-5 h-5 text-blue-400"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-base sm:text-lg leading-tight text-white">GKS Campus Bridge</h1>
+                        <span class="px-2 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">v4.5</span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">Global Korea Scholarship Student Assistant</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- App Interface Language Selector -->
+                <div class="relative">
+                    <select id="appLanguageSelect" onchange="changeAppLanguage(this.value)" class="bg-slate-950 text-xs font-medium border border-slate-700/80 rounded-full px-3 py-1.5 text-blue-400 focus:outline-none focus:border-blue-500 cursor-pointer">
+                        <option value="ru">Русский (RU)</option>
+                        <option value="en">🌐 English (EN)</option>
+                        <option value="ko">한국어 (KO)</option>
+                        <option value="de">Deutsch (DE)</option>
+                        <option value="kk">Қазақша (KK)</option>
+                        <option value="fr">Français (FR)</option>
+                        <option value="es">Español (ES)</option>
+                        <option value="ja">日本語 (JA)</option>
+                        <option value="zh">中文 (ZH)</option>
+                        <option value="pt">Português (PT)</option>
+                        <option value="tr">Türkçe (TR)</option>
+                        <option value="ar">العربية (AR)</option>
+                    </select>
+                </div>
+
+                <div id="profileWidget" class="flex items-center gap-2.5 bg-slate-800/80 border border-slate-700/60 rounded-full py-1 px-2.5 cursor-pointer" onclick="document.getElementById('registerModal').classList.remove('hidden')">
+                    <img id="userAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" class="w-7 h-7 rounded-full object-cover border border-blue-400">
+                    <div class="text-left hidden md:block">
+                        <p id="userName" class="text-xs font-semibold text-white">Гость</p>
+                        <p id="userUni" class="text-[10px] text-slate-400">Seoul National Univ.</p>
+                    </div>
+                    <i data-lucide="settings" class="w-3.5 h-3.5 text-slate-400 ml-1"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+
+        <nav class="flex items-center gap-2 border-b border-slate-800 overflow-x-auto custom-scrollbar pb-2">
+            <button onclick="switchTab('translator')" id="tab-btn-translator" class="tab-btn active flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all bg-blue-600 text-white shadow-lg shadow-blue-600/20 whitespace-nowrap">
+                <i data-lucide="languages" class="w-4 h-4"></i>
+                <span data-i18n="navTranslator">Smart Translator</span>
+            </button>
+            <button onclick="switchTab('finance')" id="tab-btn-finance" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 whitespace-nowrap">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+                <span data-i18n="navFinance">Финансовый Трекер</span>
+            </button>
+            <button onclick="switchTab('map')" id="tab-btn-map" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 whitespace-nowrap">
+                <i data-lucide="map-pin" class="w-4 h-4"></i>
+                <span data-i18n="navMap">Карта Кампуса</span>
+            </button>
+            <button onclick="switchTab('checklist')" id="tab-btn-checklist" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 whitespace-nowrap">
+                <i data-lucide="check-square" class="w-4 h-4"></i>
+                <span data-i18n="navChecklist">Чек-лист</span>
+            </button>
+            <button onclick="switchTab('emergency')" id="tab-btn-emergency" class="tab-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-800/60 whitespace-nowrap">
+                <i data-lucide="phone-call" class="w-4 h-4"></i>
+                <span data-i18n="navEmergency">Экстренные вызовы</span>
+            </button>
+        </nav>
+
+        <!-- TAB 1: TRANSLATOR -->
+        <section id="tab-content-translator" class="tab-content block space-y-6">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2" data-i18n="transTitle">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-blue-400"></i>
+                        Адаптивный переводчик с транскрипцией
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1" data-i18n="transSub">Выбирайте роль собеседника для правильной степени вежливости и транскрипции.</p>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-300 block uppercase tracking-wider" data-i18n="selectRole">С кем вы общаетесь?:</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                        <button onclick="selectRole('Professor')" id="role-Professor" class="role-btn active p-3 bg-blue-600 text-white rounded-xl border border-blue-500/50 text-left transition-all">
+                            <i data-lucide="graduation-cap" class="w-4 h-4 mb-1"></i>
+                            <p class="text-xs font-bold">Professor</p>
+                            <p class="text-[10px] opacity-80">Высокий 존댓말</p>
+                        </button>
+                        <button onclick="selectRole('Immigration officer')" id="role-Immigration officer" class="role-btn p-3 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 text-left transition-all">
+                            <i data-lucide="shield-check" class="w-4 h-4 mb-1"></i>
+                            <p class="text-xs font-bold">Immigration</p>
+                            <p class="text-[10px] text-slate-500">Официальный 니다</p>
+                        </button>
+                        <button onclick="selectRole('Doctor')" id="role-Doctor" class="role-btn p-3 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 text-left transition-all">
+                            <i data-lucide="stethoscope" class="w-4 h-4 mb-1"></i>
+                            <p class="text-xs font-bold">Doctor</p>
+                            <p class="text-[10px] text-slate-500">Медицинский</p>
+                        </button>
+                        <button onclick="selectRole('Bank employee')" id="role-Bank employee" class="role-btn p-3 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 text-left transition-all">
+                            <i data-lucide="building-2" class="w-4 h-4 mb-1"></i>
+                            <p class="text-xs font-bold">Bank Staff</p>
+                            <p class="text-[10px] text-slate-500">Деловой</p>
+                        </button>
+                        <button onclick="selectRole('Landlord')" id="role-Landlord" class="role-btn p-3 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 text-left transition-all">
+                            <i data-lucide="home" class="w-4 h-4 mb-1"></i>
+                            <p class="text-xs font-bold">Landlord</p>
+                            <p class="text-[10px] text-slate-500">Уважительный</p>
+                        </button>
+                        <button onclick="selectRole('Friend')" id="role-Friend" class="role-btn p-3 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 text-left transition-all">
+                            <i data-lucide="smile" class="w-4 h-4 mb-1"></i>
+                            <p class="text-xs font-bold">Friend</p>
+                            <p class="text-[10px] text-slate-500">Неформальный 반말</p>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold text-slate-300 block" data-i18n="inputText">Введите текст:</label>
+                        <textarea id="translatorInput" rows="6" placeholder="Например: Здравствуйте, можно задать вам вопрос?" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none custom-scrollbar resize-none"></textarea>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-slate-300 block" data-i18n="translationResult">Перевод и транскрипция:</label>
+                            <select id="targetLanguage" onchange="performTranslation()" class="bg-slate-950 text-xs border border-slate-800 rounded-lg px-2 py-1 text-blue-400 focus:outline-none">
+                                <option value="ko">Korean (한국어)</option>
+                                <option value="de">German (Deutsch)</option>
+                                <option value="kk">Kazakh (Қазақша)</option>
+                                <option value="fr">French (Français)</option>
+                                <option value="es">Spanish (Español)</option>
+                                <option value="ja">Japanese (日本語)</option>
+                                <option value="zh">Chinese (中文)</option>
+                                <option value="tr">Turkish (Türkçe)</option>
+                                <option value="pt">Portuguese (Português)</option>
+                                <option value="ru">Russian (Русский)</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <div id="translatorOutput" class="w-full h-[90px] bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-emerald-400 font-mono leading-relaxed overflow-y-auto custom-scrollbar">
+                                [Перевод появится здесь...]
+                            </div>
+                            <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1" data-i18n="transcriptionLabel">📢 Транскрипция / Чтение:</span>
+                                <div id="transcriptionOutput" class="text-xs text-blue-300 font-mono italic leading-relaxed">
+                                    [Транскрипция появится здесь...]
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="performTranslation()" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl text-sm flex items-center gap-2 transition-all shadow-lg shadow-blue-600/30">
+                        <span data-i18n="btnTranslate">Перевести</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: FINANCE TRACKER -->
+        <section id="tab-content-finance" class="tab-content hidden space-y-6">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="wallet" class="w-5 h-5 text-emerald-400"></i>
+                        <span data-i18n="financeTitle">Студенческий Финансовый Трекер</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1" data-i18n="financeSub">Управляйте расходами и стипендиями в Корее (₩ KRW)</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-1">
+                        <p class="text-xs text-slate-400" data-i18n="totalIncome">Общий Доход</p>
+                        <p id="totalIncome" class="text-xl font-bold text-emerald-400">₩0</p>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-1">
+                        <p class="text-xs text-slate-400" data-i18n="totalExpense">Общий Расход</p>
+                        <p id="totalExpense" class="text-xl font-bold text-rose-400">₩0</p>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-1">
+                        <p class="text-xs text-slate-400" data-i18n="balance">Остаток Баланса</p>
+                        <p id="totalBalance" class="text-xl font-bold text-blue-400">₩0</p>
+                    </div>
+                </div>
+
+                <form onsubmit="addTransaction(event)" class="bg-slate-950/60 border border-slate-800 p-4 rounded-xl grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-300 block mb-1" data-i18n="desc">Описание</label>
+                        <input type="text" id="financeDesc" required placeholder="GKS Stipend" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-300 block mb-1" data-i18n="amount">Сумма (₩ KRW)</label>
+                        <input type="number" id="financeAmount" required placeholder="1000000" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-300 block mb-1" data-i18n="type">Тип</label>
+                        <select id="financeType" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none">
+                            <option value="income">Доход (+)</option>
+                            <option value="expense">Расход (-)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg text-xs transition-all flex items-center justify-center gap-1">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span data-i18n="btnAdd">Добавить</span>
+                    </button>
+                </form>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-950 text-slate-400 uppercase text-[10px]">
+                            <tr>
+                                <th class="p-3">Описание</th>
+                                <th class="p-3">Тип</th>
+                                <th class="p-3">Сумма</th>
+                                <th class="p-3 text-right">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody id="financeList" class="divide-y divide-slate-800/60"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: CAMPUS MAP -->
+        <section id="tab-content-map" class="tab-content hidden flex-1 flex flex-col gap-4">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="map" class="w-5 h-5 text-blue-400"></i>
+                        <h2 class="text-base font-semibold text-white" data-i18n="mapTitle">Карта объектов рядом с кампусом</h2>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="filterMapMarkers('all')" class="map-filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-blue-600 text-white">Все</button>
+                        <button onclick="filterMapMarkers('vegan')" class="map-filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300">🥗 Vegan</button>
+                        <button onclick="filterMapMarkers('halal')" class="map-filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300">🥙 Halal</button>
+                        <button onclick="filterMapMarkers('24h')" class="map-filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300">🌙 24/7 Store</button>
+                    </div>
+                </div>
+
+                <div id="mapContainer" class="w-full h-[500px] rounded-xl overflow-hidden border border-slate-800 relative shadow-inner"></div>
+            </div>
+        </section>
+
+        <!-- TAB 4: CHECKLIST & TASKS -->
+        <section id="tab-content-checklist" class="tab-content hidden space-y-6">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-6">
+                <!-- Progress Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-white mb-1" data-i18n="checklistTitle">Чек-лист прибытия и задачи</h2>
+                        <p class="text-xs text-slate-400" data-i18n="checklistSub">Отслеживайте прогресс выполнения обязательных и личных шагов</p>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="bg-slate-950 border border-slate-800 px-4 py-3 rounded-xl min-w-[220px]">
+                        <div class="flex justify-between text-xs font-medium mb-1.5">
+                            <span class="text-slate-400" data-i18n="progressLabel">Прогресс:</span>
+                            <span id="checklistPercentage" class="text-emerald-400 font-bold">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div id="checklistProgressBar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Task Input -->
+                <form onsubmit="addCustomTask(event)" class="flex gap-2">
+                    <input type="text" id="newTaskInput" required placeholder="Добавить свою задачу..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:border-blue-500 focus:outline-none">
+                    <button type="submit" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-blue-600/30">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span data-i18n="btnAddTask">Добавить задачу</span>
+                    </button>
+                </form>
+
+                <div id="checklistItems" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+        </section>
+
+        <!-- TAB 5: EMERGENCY CONTACTS -->
+        <section id="tab-content-emergency" class="tab-content hidden space-y-6">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6">
+                <h2 class="text-lg font-bold text-white mb-4" data-i18n="emergencyTitle">Экстренные службы в Корее</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <a href="tel:1345" class="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-3">
+                        <div class="p-3 bg-blue-600/20 text-blue-400 rounded-lg"><i data-lucide="phone" class="w-5 h-5"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-400">Иммиграция (1345)</p>
+                            <p class="text-base font-bold text-white">1345</p>
+                        </div>
+                    </a>
+                    <a href="tel:112" class="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-3">
+                        <div class="p-3 bg-red-600/20 text-red-400 rounded-lg"><i data-lucide="shield-alert" class="w-5 h-5"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-400">Полиция (112)</p>
+                            <p class="text-base font-bold text-white">112</p>
+                        </div>
+                    </a>
+                    <a href="tel:119" class="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center gap-3">
+                        <div class="p-3 bg-amber-600/20 text-amber-400 rounded-lg"><i data-lucide="ambulance" class="w-5 h-5"></i></div>
+                        <div>
+                            <p class="text-xs text-slate-400">Скорая помощь (119)</p>
+                            <p class="text-base font-bold text-white">119</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JavaScript Logic & Complete Dictionary -->
+    <script>
+        let currentUser = JSON.parse(localStorage.getItem('gks_user')) || null;
+        let activeRole = 'Professor';
+        let mapInstance = null;
+        let mapMarkers = [];
+        let financeData = JSON.parse(localStorage.getItem('gks_finance')) || [];
+
+        const defaultTasks = [
+            { id: 'arc', text: 'Подача на ARC (Alien Registration Card)', desc: 'Обязательно в течение 90 дней', done: false },
+            { id: 'bank', text: 'Открытие банковского счета', desc: 'Для ежемесячной выплаты стипендии GKS', done: false },
+            { id: 'sim', text: 'Корейская SIM-карта', desc: 'Оформление на имя по паспорту/ARC', done: false },
+            { id: 'tmoney', text: 'Покупка карты T-Money', desc: 'В CU/GS25 для проезда на транспорте', done: false }
+        ];
+
+        let checklistTasks = JSON.parse(localStorage.getItem('gks_checklist')) || defaultTasks;
+
+        // Полная локализация интерфейса для всех 12 языков
+        const translations = {
+            ru: {
+                navTranslator: "Smart Translator", navFinance: "Финансовый Трекер", navMap: "Карта Кампуса", navChecklist: "Чек-лист", navEmergency: "Экстренные вызовы",
+                regTitle: "Профиль студента", regSubtitle: "Заполните данные для доступа к сервисам", labelName: "Ваше имя", labelUni: "Ваш Университет", labelAvatar: "Аватар",
+                uploadGallery: "Загрузить из галереи", btnSaveProfile: "Сохранить профиль", transTitle: "Адаптивный переводчик с транскрипцией", transSub: "Выбирайте роль собеседника для правильной степени вежливости и транскрипции.",
+                selectRole: "С кем вы общаетесь?:", inputText: "Введите текст:", translationResult: "Перевод и транскрипция:", transcriptionLabel: "📢 Транскрипция / Чтение:", btnTranslate: "Перевести",
+                financeTitle: "Студенческий Финансовый Трекер", financeSub: "Управляйте расходами и стипендиями в Корее (₩ KRW)", totalIncome: "Общий Доход", totalExpense: "Общий Расход", balance: "Остаток Баланса",
+                desc: "Описание", amount: "Сумма (₩)", type: "Тип", btnAdd: "Добавить", mapTitle: "Карта объектов рядом с кампусом", checklistTitle: "Чек-лист прибытия и задачи", checklistSub: "Отслеживайте прогресс выполнения обязательных и личных шагов", progressLabel: "Прогресс:", btnAddTask: "Добавить задачу", emergencyTitle: "Экстренные службы в Корее"
+            },
+            en: {
+                navTranslator: "Smart Translator", navFinance: "Finance Tracker", navMap: "Campus Map", navChecklist: "Checklist", navEmergency: "Emergency Contacts",
+                regTitle: "Student Profile", regSubtitle: "Fill in details to personalize your experience", labelName: "Your Name", labelUni: "Your University", labelAvatar: "Avatar",
+                uploadGallery: "Upload from Gallery", btnSaveProfile: "Save Profile", transTitle: "Smart Honorific Translator", transSub: "Automatically adapts politeness and phonetic transcription.",
+                selectRole: "Who are you talking to?:", inputText: "Enter text:", translationResult: "Translation & Phonetics:", transcriptionLabel: "📢 Phonetics / Transcription:", btnTranslate: "Translate",
+                financeTitle: "Student Financial Tracker", financeSub: "Track your GKS scholarships and daily expenses in KRW (₩)", totalIncome: "Total Income", totalExpense: "Total Expense", balance: "Balance",
+                desc: "Description", amount: "Amount (₩)", type: "Type", btnAdd: "Add", mapTitle: "Essential Places Near Campus", checklistTitle: "Arrival Checklist & Tasks", checklistSub: "Track mandatory and personal milestones", progressLabel: "Progress:", btnAddTask: "Add Task", emergencyTitle: "Emergency Contacts in Korea"
+            },
+            ko: {
+                navTranslator: "존댓말 번역기", navFinance: "재정 관리", navMap: "캠퍼스 지도", navChecklist: "체크리스트", navEmergency: "긴급 연락처",
+                regTitle: "학생 프로필", regSubtitle: "서비스 이용을 위해 정보를 입력하세요", labelName: "이름", labelUni: "대학교", labelAvatar: "아바타",
+                uploadGallery: "갤러리에서 업로드", btnSaveProfile: "프로필 저장", transTitle: "상대방 맞춤형 존댓말 번역기", transSub: "대화 상대에 따라 적절한 존댓말과 발음 기호를 제공합니다.",
+                selectRole: "대화 상대 선택:", inputText: "텍스트 입력:", translationResult: "번역 및 발음:", transcriptionLabel: "📢 발음 / 로마자 표기:", btnTranslate: "번역하기",
+                financeTitle: "GKS 학생 재정 트래커", financeSub: "장학금 및 지출 내역을 관리하세요 (₩ KRW)", totalIncome: "총 수입", totalExpense: "총 지출", balance: "잔액",
+                desc: "내역", amount: "금액 (₩)", type: "유형", btnAdd: "추가", mapTitle: "캠퍼스 주변 주요 시설", checklistTitle: "한국 정착 체크리스트 및 과제", checklistSub: "필수 및 개인 일정을 추적하세요", progressLabel: "진행률:", btnAddTask: "작업 추가", emergencyTitle: "한국 긴급 연락처"
+            },
+            de: {
+                navTranslator: "Smart Übersetzer", navFinance: "Finanz-Tracker", navMap: "Campus-Karte", navChecklist: "Checkliste", navEmergency: "Notfälle",
+                regTitle: "Studentenprofil", regSubtitle: "Geben Sie Ihre Daten ein", labelName: "Ihr Name", labelUni: "Universität", labelAvatar: "Avatar",
+                uploadGallery: "Aus Galerie hochladen", btnSaveProfile: "Profil speichern", transTitle: "Intelligenter Höflichkeitsübersetzer", transSub: "Passt Grammatik und Lautschrift an die gewählte Rolle an.",
+                selectRole: "Mit wem sprechen Sie?:", inputText: "Text eingeben:", translationResult: "Übersetzung & Lautschrift:", transcriptionLabel: "📢 Lautschrift / Aussprache:", btnTranslate: "Übersetzen",
+                financeTitle: "Studenten-Finanz-Tracker", financeSub: "Verwalten Sie Stipendien und Ausgaben in KRW (₩)", totalIncome: "Einnahmen", totalExpense: "Ausgaben", balance: "Saldo",
+                desc: "Beschreibung", amount: "Betrag (₩)", type: "Typ", btnAdd: "Hinzufügen", mapTitle: "Orte in der Nähe des Campus", checklistTitle: "Ankunfts-Checkliste & Aufgaben", checklistSub: "Verfolgen Sie persönliche und Pflichtaufgaben", progressLabel: "Fortschritt:", btnAddTask: "Aufgabe hinzufügen", emergencyTitle: "Notdienste in Korea"
+            },
+            kk: {
+                navTranslator: "Ақылды аудармашы", navFinance: "Қаржы трекері", navMap: "Кампус картасы", navChecklist: "Чек-лист", navEmergency: "Шұғыл қоңыраулар",
+                regTitle: "Студент профилі", regSubtitle: "Мәліметтерді толтырыңыз", labelName: "Атыңыз", labelUni: "Университет", labelAvatar: "Аватар",
+                uploadGallery: "Галереядан жүктеу", btnSaveProfile: "Сақтау", transTitle: "Әдептілік деңгейі бар аудармашы", transSub: "Сұхбаттасушыға байланысты дұрыс сөйлеу мен транскрипцияны таңдайды.",
+                selectRole: "Кіммен сөйлесіп жатырсыз?:", inputText: "Мәтінді енгізіңіз:", translationResult: "Аударма мен транскрипция:", transcriptionLabel: "📢 Оқылуы / Транскрипциясы:", btnTranslate: "Аудару",
+                financeTitle: "Студенттік қаржы трекері", financeSub: "Кореядағы кірістер мен шығыстарды басқарыңыз (₩ KRW)", totalIncome: "Жалпы кіріс", totalExpense: "Жалпы шығыс", balance: "Баланс",
+                desc: "Сипаттамасы", amount: "Сомасы (₩)", type: "Түрі", btnAdd: "Қосу", mapTitle: "Кампус жанындағы нысандар картасы", checklistTitle: "Келу чек-листі мен тапсырмалар", checklistSub: "Міндетті және жеке қадамдардың орындалуын бақылаңыз", progressLabel: "Прогресс:", btnAddTask: "Тапсырма қосу", emergencyTitle: "Кореядағы шұғыл қызметтер"
+            },
+            fr: {
+                navTranslator: "Traducteur Intelligent", navFinance: "Suivi Financier", navMap: "Carte du Campus", navChecklist: "Check-list", navEmergency: "Urgences",
+                regTitle: "Profil Étudiant", regSubtitle: "Remplissez vos informations", labelName: "Votre Nom", labelUni: "Université", labelAvatar: "Avatar",
+                uploadGallery: "Importer de la galerie", btnSaveProfile: "Enregistrer", transTitle: "Traducteur de politesse avec phonétique", transSub: "Adapte la grammaire et la phonétique selon votre interlocuteur.",
+                selectRole: "À qui parlez-vous ?:", inputText: "Texte:", translationResult: "Traduction & Phonétique:", transcriptionLabel: "📢 Phonétique / Transcriptions:", btnTranslate: "Traduire",
+                financeTitle: "Gestionnaire Financier Étudiant", financeSub: "Gérez vos bourses et dépenses en KRW (₩)", totalIncome: "Revenus", totalExpense: "Dépenses", balance: "Solde",
+                desc: "Description", amount: "Montant (₩)", type: "Type", btnAdd: "Ajouter", mapTitle: "Lieux proches du campus", checklistTitle: "Check-list d'arrivée & Tâches", checklistSub: "Suivez l'avancement de vos étapes", progressLabel: "Progrès:", btnAddTask: "Ajouter une tâche", emergencyTitle: "Services d'urgence en Corée"
+            },
+            es: {
+                navTranslator: "Traductor Inteligente", navFinance: "Control Financiero", navMap: "Mapa del Campus", navChecklist: "Checklist", navEmergency: "Emergencias",
+                regTitle: "Perfil de Estudiante", regSubtitle: "Complete sus datos", labelName: "Su Nombre", labelUni: "Universidad", labelAvatar: "Avatar",
+                uploadGallery: "Subir de la galería", btnSaveProfile: "Guardar", transTitle: "Traductor Inteligente de Cortesía", transSub: "Adapta la cortesía y fonética según con quién hables.",
+                selectRole: "¿Con quién hablas?:", inputText: "Texto:", translationResult: "Traducción y Fonética:", transcriptionLabel: "📢 Fonética / Pronunciación:", btnTranslate: "Traducir",
+                financeTitle: "Rastreador Financiero Estudiantil", financeSub: "Controle sus becas y gastos diarios en KRW (₩)", totalIncome: "Ingresos", totalExpense: "Gastos", balance: "Balance",
+                desc: "Descripción", amount: "Monto (₩)", type: "Tipo", btnAdd: "Agregar", mapTitle: "Lugares cercanos al campus", checklistTitle: "Lista de llegada y tareas", checklistSub: "Siga el progreso de sus tareas", progressLabel: "Progreso:", btnAddTask: "Agregar tarea", emergencyTitle: "Servicios de emergencia en Corea"
+            },
+            ja: {
+                navTranslator: "スマート翻訳機", navFinance: "家計簿", navMap: "キャンパスマップ", navChecklist: "チェックリスト", navEmergency: "緊急連絡先",
+                regTitle: "学生プロフィール", regSubtitle: "情報を入力してください", labelName: "お名前", labelUni: "大学名", labelAvatar: "アバター",
+                uploadGallery: "ギャラリーからアップロード", btnSaveProfile: "保存", transTitle: "敬語レベル適応型翻訳機", transSub: "相手に応じて敬語表現と読み方を自動調整します。",
+                selectRole: "会話の相手:", inputText: "テキスト:", translationResult: "翻訳と発音:", transcriptionLabel: "📢 発音 / 読み方:", btnTranslate: "翻訳",
+                financeTitle: "学生財政トラッカー", financeSub: "奨学金と支出をKRW (₩)で管理します", totalIncome: "収入", totalExpense: "支出", balance: "残高",
+                desc: "内容", amount: "金額 (₩)", type: "タイプ", btnAdd: "追加", mapTitle: "キャンパス周辺の施設", checklistTitle: "到着後のチェックリストとタスク", checklistSub: "進捗状況を追跡します", progressLabel: "進捗率:", btnAddTask: "タスク追加", emergencyTitle: "韓国の緊急連絡先"
+            },
+            zh: {
+                navTranslator: "智能翻译官", navFinance: "财务追踪", navMap: "校园地图", navChecklist: "清单", navEmergency: "紧急求助",
+                regTitle: "学生资料", regSubtitle: "填写详细信息", labelName: "姓名", labelUni: "大学", labelAvatar: "头像",
+                uploadGallery: "从相册上传", btnSaveProfile: "保存", transTitle: "自适应敬语智能翻译", transSub: "根据对象自动调整敬语和音标拼读。",
+                selectRole: "对话对象：", inputText: "文本：", translationResult: "翻译与注音：", transcriptionLabel: "📢 拼音 / 注音：", btnTranslate: "翻译",
+                financeTitle: "留学生财务记账", financeSub: "管理在韩奖学金与日常开销 (₩ KRW)", totalIncome: "总收入", totalExpense: "总支出", balance: "结余",
+                desc: "描述", amount: "金额 (₩)", type: "类型", btnAdd: "添加", mapTitle: "校园周边设施地图", checklistTitle: "入境清单与任务", checklistSub: "追踪个人与必办事项进度", progressLabel: "进度：", btnAddTask: "添加任务", emergencyTitle: "韩国紧急求助电话"
+            },
+            pt: {
+                navTranslator: "Tradutor Inteligente", navFinance: "Controle Financeiro", navMap: "Mapa do Campus", navChecklist: "Checklist", navEmergency: "Emergências",
+                regTitle: "Perfil do Estudante", regSubtitle: "Preencha seus dados", labelName: "Seu Nome", labelUni: "Universidade", labelAvatar: "Avatar",
+                uploadGallery: "Carregar da galeria", btnSaveProfile: "Salvar", transTitle: "Tradutor de Cortesia Inteligente", transSub: "Adapta a gramática e fonética de acordo com a função.",
+                selectRole: "Com quem fala?:", inputText: "Texto:", translationResult: "Tradução e Fonética:", transcriptionLabel: "📢 Fonética / Pronúncia:", btnTranslate: "Traduzir",
+                financeTitle: "Gestor Financeiro Estudantil", financeSub: "Acompanhe bolsas e despesas em KRW (₩)", totalIncome: "Receita", totalExpense: "Despesa", balance: "Saldo",
+                desc: "Descrição", amount: "Valor (₩)", type: "Tipo", btnAdd: "Adicionar", mapTitle: "Locais próximos ao campus", checklistTitle: "Checklist de Chegada & Tarefas", checklistSub: "Acompanhe o progresso das tarefas", progressLabel: "Progresso:", btnAddTask: "Adicionar tarefa", emergencyTitle: "Serviços de emergência na Coreia"
+            },
+            tr: {
+                navTranslator: "Akıllı Çevirmen", navFinance: "Finans Takibi", navMap: "Kampüs Haritası", navChecklist: "Kontrol Listesi", navEmergency: "Acil Durum",
+                regTitle: "Öğrenci Profili", regSubtitle: "Bilgilerinizi doldurun", labelName: "Adınız", labelUni: "Üniversite", labelAvatar: "Avatar",
+                uploadGallery: "Galeriden yükle", btnSaveProfile: "Kaydet", transTitle: "Nezaket Düzeyli Çevirmen", transSub: "Seçilen kişiye göre gramer ve telaffuz sağlar.",
+                selectRole: "Kiminle konuşuyorsunuz?:", inputText: "Metin:", translationResult: "Çeviri ve Okunuş:", transcriptionLabel: "📢 Okunuş / Telaffuz:", btnTranslate: "Çevir",
+                financeTitle: "Öğrenci Finans Takibi", financeSub: "Burslarınızı ve harcamalarınızı KRW (₩) olarak izleyin", totalIncome: "Toplam Gelir", totalExpense: "Toplam Gider", balance: "Bakiye",
+                desc: "Açıklama", amount: "Miktar (₩)", type: "Tür", btnAdd: "Ekle", mapTitle: "Kampüs Yakınındaki Yerler", checklistTitle: "Varış Kontrol Listesi ve Görevler", checklistSub: "İlerlemenizi takip edin", progressLabel: "İlerleme:", btnAddTask: "Görev Ekle", emergencyTitle: "Kore'deki Acil Servisler"
+            },
+            ar: {
+                navTranslator: "المترجم الذكي", navFinance: "المتتبع المالي", navMap: "خريطة الحرم الجامعي", navChecklist: "قائمة التحقق", navEmergency: "الطوارئ",
+                regTitle: "ملف الطالب", regSubtitle: "املأ البيانات الشخصية", labelName: "اسمك", labelUni: "الجامعة", labelAvatar: "الصورة",
+                uploadGallery: "تحميل من المعرض", btnSaveProfile: "حفظ", transTitle: "مترجم التأدب واللفظ الذكي", transSub: "يطابق القواعد واللفظ حسب الشخص.",
+                selectRole: "مع من تتحدث؟:", inputText: "النص:", translationResult: "الترجمة واللفظ:", transcriptionLabel: "📢 طريقة النطق:", btnTranslate: "ترجمة",
+                financeTitle: "المتتبع المالي للطلاب", financeSub: "تتبع المنح والمصروفات بالوون الكوري (₩)", totalIncome: "إجمالي الدخل", totalExpense: "إجمالي المصروفات", balance: "الرصيد",
+                desc: "الوصف", amount: "المبلغ (₩)", type: "النوع", btnAdd: "إضافة", mapTitle: "أماكن هامة بالقرب من الحرم الجامعي", checklistTitle: "قائمة الوصول والمهام", checklistSub: "تتبع تقدم المهام الشحصية", progressLabel: "التقدم:", btnAddTask: "إضافة مهمة", emergencyTitle: "خدمات الطوارئ في كوريا"
+            }
+        };
+
+        const universityCoords = {
+            'SNU': { lat: 37.459882, lng: 126.951905, name: 'Seoul National University' },
+            'KU': { lat: 37.5894, lng: 127.0323, name: 'Korea University' },
+            'YU': { lat: 37.5657, lng: 126.9386, name: 'Yonsei University' },
+            'SKKU': { lat: 37.5882, lng: 126.9936, name: 'Sungkyunkwan University' },
+            'KAIST': { lat: 36.3721, lng: 127.3604, name: 'KAIST Campus' }
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            initMap();
+            checkUserSession();
+            renderChecklist();
+            renderFinance();
+        });
+
+        function checkUserSession() {
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser.name;
+                document.getElementById('userUni').textContent = universityCoords[currentUser.university] ? universityCoords[currentUser.university].name : currentUser.university;
+                document.getElementById('userAvatar').src = currentUser.avatar;
+                document.getElementById('registerModal').classList.add('hidden');
+            } else {
+                document.getElementById('registerModal').classList.remove('hidden');
+            }
+        }
+
+        function handleRegistration(e) {
+            e.preventDefault();
+            const name = document.getElementById('regName').value;
+            const university = document.getElementById('regUniversity').value;
+            let avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80";
+
+            const selectedAvatar = document.querySelector('input[name="avatar"]:checked');
+            if (selectedAvatar) avatar = selectedAvatar.value;
+            if (currentUser && currentUser.avatar.startsWith('data:image')) avatar = currentUser.avatar;
+
+            currentUser = { name, university, avatar };
+            localStorage.setItem('gks_user', JSON.stringify(currentUser));
+
+            checkUserSession();
+            updateMapForUniversity();
+        }
+
+        function handleCustomAvatar(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if(!currentUser) currentUser = {};
+                    currentUser.avatar = e.target.result;
+                    document.getElementById('userAvatar').src = currentUser.avatar;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderChecklist() {
+            const container = document.getElementById('checklistItems');
+            container.innerHTML = '';
+
+            let completedCount = 0;
+
+            checklistTasks.forEach((task, index) => {
+                if (task.done) completedCount++;
+
+                const item = document.createElement('div');
+                item.className = "bg-slate-950/60 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-3";
+                item.innerHTML = `
+                    <div class="flex items-start gap-3 flex-1">
+                        <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTask(${index})" class="mt-1 w-4 h-4 rounded text-blue-600 border-slate-700 bg-slate-900 cursor-pointer">
+                        <div>
+                            <span class="text-sm font-semibold ${task.done ? 'line-through text-slate-500' : 'text-slate-200'} block">${task.text}</span>
+                            ${task.desc ? `<span class="text-xs text-slate-400 block mt-0.5">${task.desc}</span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="deleteTask(${index})" class="text-slate-500 hover:text-rose-400 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                `;
+                container.appendChild(item);
+            });
+
+            const percent = checklistTasks.length ? Math.round((completedCount / checklistTasks.length) * 100) : 0;
+            document.getElementById('checklistPercentage').textContent = `${percent}%`;
+            document.getElementById('checklistProgressBar').style.width = `${percent}%`;
+
+            localStorage.setItem('gks_checklist', JSON.stringify(checklistTasks));
+            lucide.createIcons();
+        }
+
+        function toggleTask(index) {
+            checklistTasks[index].done = !checklistTasks[index].done;
+            renderChecklist();
+        }
+
+        function addCustomTask(e) {
+            e.preventDefault();
+            const input = document.getElementById('newTaskInput');
+            const text = input.value.trim();
+            if (text) {
+                checklistTasks.push({ id: Date.now(), text, desc: 'Пользовательская задача', done: false });
+                input.value = '';
+                renderChecklist();
+            }
+        }
+
+        function deleteTask(index) {
+            checklistTasks.splice(index, 1);
+            renderChecklist();
+        }
+
+        function addTransaction(e) {
+            e.preventDefault();
+            const desc = document.getElementById('financeDesc').value;
+            const amount = parseFloat(document.getElementById('financeAmount').value);
+            const type = document.getElementById('financeType').value;
+
+            financeData.push({ id: Date.now(), desc, amount, type });
+            localStorage.setItem('gks_finance', JSON.stringify(financeData));
+
+            document.getElementById('financeDesc').value = '';
+            document.getElementById('financeAmount').value = '';
+
+            renderFinance();
+        }
+
+        function deleteTransaction(id) {
+            financeData = financeData.filter(item => item.id !== id);
+            localStorage.setItem('gks_finance', JSON.stringify(financeData));
+            renderFinance();
+        }
+
+        function renderFinance() {
+            const list = document.getElementById('financeList');
+            if(!list) return;
+            list.innerHTML = '';
+
+            let income = 0;
+            let expense = 0;
+
+            financeData.forEach(item => {
+                if (item.type === 'income') income += item.amount;
+                else expense += item.amount;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-white">${item.desc}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] ${item.type === 'income' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}">${item.type.toUpperCase()}</span></td>
+                    <td class="p-3 font-bold ${item.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}">₩${item.amount.toLocaleString()}</td>
+                    <td class="p-3 text-right"><button onclick="deleteTransaction(${item.id})" class="text-slate-500 hover:text-rose-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                `;
+                list.appendChild(tr);
+            });
+
+            document.getElementById('totalIncome').textContent = `₩${income.toLocaleString()}`;
+            document.getElementById('totalExpense').textContent = `₩${expense.toLocaleString()}`;
+            document.getElementById('totalBalance').textContent = `₩${(income - expense).toLocaleString()}`;
+            lucide.createIcons();
+        }
+
+        function selectRole(role) {
+            activeRole = role;
+            document.querySelectorAll('.role-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-500/50');
+                btn.classList.add('bg-slate-950', 'text-slate-300', 'border-slate-800');
+            });
+            const targetBtn = document.getElementById(`role-${role}`);
+            if(targetBtn) {
+                targetBtn.classList.add('bg-blue-600', 'text-white', 'border-blue-500/50');
+                targetBtn.classList.remove('bg-slate-950', 'text-slate-300', 'border-slate-800');
+            }
+            performTranslation();
+        }
+
+        function performTranslation() {
+            const input = document.getElementById('translatorInput').value.trim();
+            const output = document.getElementById('translatorOutput');
+            const transcriptionOutput = document.getElementById('transcriptionOutput');
+            const targetLang = document.getElementById('targetLanguage').value;
+
+            if (!input) {
+                output.textContent = "[Введите текст для перевода...]";
+                transcriptionOutput.textContent = "[Транскрипция появится здесь...]";
+                return;
+            }
+
+            let translated = "";
+            let transcription = "";
+
+            if (targetLang === 'ko') {
+                if (activeRole === 'Professor') {
+                    translated = "교수님, 실례지만 질문 하나 드려도 되겠습니까?";
+                    transcription = "Gyosunim, silleyejiman jilmun hana deuryeodo doegessseumnikka? (Кёсуним, силледжиман джильмун хана дылёдо твегессымниока?)";
+                } else if (activeRole === 'Immigration officer' || activeRole === 'Bank employee') {
+                    translated = "안녕하십니까, 문의할 사항이 있어서 왔습니다.";
+                    transcription = "Annyeonghasimnika, mun-uihal sahang-i isseoseo wasseumnida. (Аннёнхасимника, мунихаль сахани иссосо вассымнида)";
+                } else if (activeRole === 'Friend') {
+                    translated = "안녕! 혹시 이것 좀 물어봐도 돼?";
+                    transcription = "Annyeong! Hoksi igeos jom mureobwado dwae? (Аннён! Хокси игот чом муровадо твэ?)";
+                } else {
+                    translated = "안녕하세요, 질문이 하나 있어요.";
+                    transcription = "Annyeonghaseyo, jilmun-i hana isseoyo. (Аннёнхасеё, джильмуни ха나 иссоё)";
+                }
+            } else if (targetLang === 'de') {
+                translated = (activeRole === 'Friend') ? "Hallo! Kann ich dich etwas fragen?" : "Guten Tag, darf ich Ihnen eine Frage stellen?";
+                transcription = (activeRole === 'Friend') ? "Hallo! Kan ikh dikh etvas fragen?" : "Guten Tag, darf ikh Ihnen eine Frage shtellen?";
+            } else if (targetLang === 'kk') {
+                translated = (activeRole === 'Friend') ? "Сәлем! Сенен бір нәрсе сұрасам бола ма?" : "Сәлеметсіз бе, сізге сұрақ қойсам бола ма?";
+                transcription = "Sālemetsiz be, sizge sūra qoysam bola ma?";
+            } else if (targetLang === 'fr') {
+                translated = (activeRole === 'Friend') ? "Salut! Je peux te poser une question?" : "Bonjour, puis-je vous poser une question?";
+                transcription = "Bonjour, pui-jü vu pozer un kestion?";
+            } else if (targetLang === 'ja') {
+                translated = (activeRole === 'Professor') ? "教授、失礼ですが質問をしてもよろしいでしょうか？" : "こんにちは、質問があります。";
+                transcription = "Kyōju, shitsurei desu ga shitsumon wo shitemo yoroshī deshō ka?";
+            } else {
+                translated = `[${targetLang.toUpperCase()}] (${activeRole}): ${input}`;
+                transcription = `[Phonetic transcription for ${targetLang}]`;
+            }
+
+            output.textContent = translated;
+            transcriptionOutput.textContent = transcription;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+            activeBtn.classList.remove('text-slate-400');
+
+            if (tabId === 'map') {
+                setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(); }, 200);
+            }
+        }
+
+        function changeAppLanguage(lang) {
+            const dict = translations[lang] || translations['en'];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key]) {
+                    el.textContent = dict[key];
+                }
+            });
+        }
+
+        function initMap() {
+            const defaultCenter = universityCoords['SNU'];
+            mapInstance = L.map('mapContainer').setView([defaultCenter.lat, defaultCenter.lng], 14);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(mapInstance);
+
+            updateMapForUniversity();
+        }
+
+        function updateMapForUniversity() {
+            if (!mapInstance) return;
+            const uniKey = currentUser ? currentUser.university : 'SNU';
+            const uni = universityCoords[uniKey] || universityCoords['SNU'];
+            
+            mapInstance.setView([uni.lat, uni.lng], 14);
+
+            mapMarkers.forEach(m => mapInstance.removeLayer(m));
+            mapMarkers = [];
+
+            const campusMarker = L.marker([uni.lat, uni.lng]).addTo(mapInstance)
+                .bindPopup(`<b>${uni.name}</b><br>Ваш Кампус`);
+            mapMarkers.push(campusMarker);
+
+            const places = [
+                { lat: uni.lat + 0.003, lng: uni.lng + 0.002, name: "Halal Asian Food", cat: "halal" },
+                { lat: uni.lat - 0.002, lng: uni.lng + 0.004, name: "Green Vegan Cafe", cat: "vegan" },
+                { lat: uni.lat + 0.001, lng: uni.lng - 0.003, name: "24/7 CU Convenience Store", cat: "24h" }
+            ];
+
+            places.forEach(p => {
+                const marker = L.marker([p.lat, p.lng]).addTo(mapInstance)
+                    .bindPopup(`<b>${p.name}</b><br>Категория: ${p.cat}`);
+                marker.category = p.cat;
+                mapMarkers.push(marker);
+            });
+        }
+
+        function filterMapMarkers(cat) {
+            mapMarkers.forEach(m => {
+                if (!m.category) return;
+                if (cat === 'all' || m.category === cat) {
+                    mapInstance.addLayer(m);
+                } else {
+                    mapInstance.removeLayer(m);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
